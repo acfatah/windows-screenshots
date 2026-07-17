@@ -38,6 +38,8 @@ Native Windows - one command covers Git Bash, PowerShell, and cmd (new sessions)
 setx SCREENSHOTS "C:\Users\<user>\OneDrive\Pictures\Screenshots"
 ```
 
+Git Bash note: the `setx` value arrives in Windows form (`C:\...`) with backslashes, which break bash wildcard matching. The skill normalizes it with `cygpath -u` before use, yielding the `/c/Users/...` form Git Bash reports natively.
+
 Tip: if you are unsure of the real folder name, check both `OneDrive\Pictures\Screenshots` and `Pictures\Screenshots` - Windows redirects Pictures into OneDrive when Known Folder Backup is on, and sync conflicts can leave a `Screenshots 1` folder behind. File Explorer may display a localized alias, so verify the on-disk name with `dir` or `ls`.
 
 ## License

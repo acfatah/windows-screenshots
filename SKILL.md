@@ -14,11 +14,18 @@ The `SCREENSHOTS` environment variable holds the folder path. Reference it in th
 | Shell | Variable | Path shape |
 |---|---|---|
 | bash (WSL) | `"$SCREENSHOTS"` | `/mnt/c/Users/<winuser>/OneDrive/Pictures/Screenshots` |
-| bash (Git Bash) | `"$SCREENSHOTS"` | `C:/Users/<user>/OneDrive/Pictures/Screenshots` |
+| bash (Git Bash) | `"$(cygpath -u "$SCREENSHOTS")"` | `/c/Users/<user>/OneDrive/Pictures/Screenshots` |
 | PowerShell | `$env:SCREENSHOTS` | `C:\Users\<user>\OneDrive\Pictures\Screenshots` |
 | cmd | `%SCREENSHOTS%` | same as PowerShell |
 
 Detect the environment first: WSL if `$WSL_DISTRO_NAME` is set or `/proc/version` mentions microsoft; Git Bash if `$OSTYPE` is `msys` or `cygwin`; otherwise you are in a native Windows shell. On non-Windows platforms without `/mnt/c`, tell the user this skill targets Windows screenshots and ask for a path if they have one.
+
+Git Bash gotcha: a value set via `setx` arrives in Windows form (`C:\Users\...`), and bash's glob engine treats backslashes as escape characters - wildcard commands silently match nothing. In WSL the variable comes from `~/.profile` already POSIX-form. So in any bash shell, resolve the folder once and use `$SHOTS` from then on (`cygpath` ships with Git Bash):
+
+```bash
+SHOTS="$SCREENSHOTS"
+[[ "$OSTYPE" == msys* || "$OSTYPE" == cygwin* ]] && SHOTS="$(cygpath -u "$SCREENSHOTS")"
+```
 
 ## Setup: SCREENSHOTS unset or folder missing
 
@@ -49,7 +56,7 @@ The folder holds years of captures. When the user asks about "my screenshot" the
 Files are named `Screenshot YYYY-MM-DD HHMMSS.png`, so filtering by filename is reliable even when OneDrive sync perturbs modification times:
 
 ```bash
-ls -t "$SCREENSHOTS"/"Screenshot $(date +%Y-%m-%d)"*.png 2>/dev/null
+ls -t "$SHOTS"/"Screenshot $(date +%Y-%m-%d)"*.png 2>/dev/null
 ```
 
 ```powershell
@@ -61,7 +68,7 @@ From cmd, delegate to PowerShell (`powershell -NoProfile -Command "..."`) - cmd 
 If nothing matches today, do not stop there: say no screenshots were taken today, show the 5 newest overall, and ask which one they meant.
 
 ```bash
-ls -t "$SCREENSHOTS"/*.png | head -5
+ls -t "$SHOTS"/*.png | head -5
 ```
 
 ```powershell
@@ -73,7 +80,7 @@ Get-ChildItem "$env:SCREENSHOTS" -Filter *.png | Sort-Object LastWriteTime -Desc
 "Latest" means newest by filename timestamp, not by modification time - OneDrive sync events can touch mtimes out of order. But never lexicographically sort the whole folder: it may also hold legacy `Screenshot_YYYYMMDD_*.png` names and hand-renamed files, and underscore sorts after space in ASCII, so old files float to the top of a plain reverse sort. Sort within the modern pattern instead - its ISO date makes a plain sort chronological:
 
 ```bash
-ls "$SCREENSHOTS"/"Screenshot "2*.png | sort -r | head -1
+ls "$SHOTS"/"Screenshot "2*.png | sort -r | head -1
 ```
 
 ```powershell
@@ -82,10 +89,10 @@ Get-ChildItem "$env:SCREENSHOTS" -Filter "Screenshot 2*.png" | Sort-Object Name 
 
 ## Reading a screenshot
 
-The Read tool renders `.png` files visually. When the user wants you to look at a screenshot (describe it, debug from it, compare it), Read the file directly instead of only listing it. Pass the path in the form native to your environment - `$SCREENSHOTS` already is.
+The Read tool renders `.png` files visually. When the user wants you to look at a screenshot (describe it, debug from it, compare it), Read the file directly instead of only listing it. Pass the path in the form native to your environment - the resolved `$SHOTS` (bash) or `$env:SCREENSHOTS` (PowerShell/cmd) already is.
 
 ## Gotchas
 
 - Ignore `desktop.ini` - hidden Windows folder metadata that appears in listings and sorts near the top after syncs.
-- Snipping Tool or third-party tools may use other name patterns; if the name filter finds nothing but the user insists a capture exists, widen the search: bash `find "$SCREENSHOTS" -newermt today \( -iname '*.png' -o -iname '*.jpg' -o -iname '*.jpeg' \)`, PowerShell `Get-ChildItem "$env:SCREENSHOTS" | Where-Object LastWriteTime -gt (Get-Date).Date`.
+- Snipping Tool or third-party tools may use other name patterns; if the name filter finds nothing but the user insists a capture exists, widen the search: bash `find "$SHOTS" -newermt today \( -iname '*.png' -o -iname '*.jpg' -o -iname '*.jpeg' \)`, PowerShell `Get-ChildItem "$env:SCREENSHOTS" | Where-Object LastWriteTime -gt (Get-Date).Date`.
 - A screenshot taken on another device may lag behind OneDrive sync by a minute or two; if the user says "I just took it" and it is missing, wait briefly and retry once before concluding it does not exist.
