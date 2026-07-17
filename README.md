@@ -42,6 +42,18 @@ Git Bash note: the `setx` value arrives in Windows form (`C:\...`) with backslas
 
 Tip: if you are unsure of the real folder name, check both `OneDrive\Pictures\Screenshots` and `Pictures\Screenshots` - Windows redirects Pictures into OneDrive when Known Folder Backup is on, and sync conflicts can leave a `Screenshots 1` folder behind. File Explorer may display a localized alias, so verify the on-disk name with `dir` or `ls`.
 
+## Versioning
+
+The version lives in exactly one place: the H1 title of [SKILL.md](SKILL.md) (e.g. `# Windows Screenshots v1.0.0`). Keeping it to a single location is deliberate - a second copy (README, a tag, a metadata field) would drift out of sync. The frontmatter `name:` is never versioned; it is the install identity.
+
+Bump rules (semver-ish):
+
+- patch - wording, gotcha, or example tweaks with no behavior change
+- minor - new commands, sections, or platform coverage
+- major - a change to the config or behavior contract (e.g. renaming the `SCREENSHOTS` env var)
+
+Release flow: edit the H1 version in the same commit as the change, `git push`, then consumers refresh with `bunx skills update -g` (or `npx skills update -g`).
+
 ## License
 
 [MIT](LICENSE)
